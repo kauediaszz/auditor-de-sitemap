@@ -1,0 +1,18 @@
+# Ambiente e segredos
+.venv/
+.env
+
+# Saídas das auditorias (relatórios, histórico de URLs, dashboards)
+saida/
+
+# Configuração local com dados do seu site (copie config/config.yaml para cá)
+config/config.local.yaml
+
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Sistema
+Zone.Identifier
+.DS_Store

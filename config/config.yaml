@@ -1,0 +1,103 @@
+# EXEMPLO: troque pelos dados do SEU site. Copie este arquivo e edite a cópia.
+#
+# O índice mestre (um <sitemapindex>) é consultado a cada execução; os sitemaps
+# filhos são descobertos em tempo real a partir dele.
+sources:
+  sitemap_index: https://www.example.com/sitemap-index.xml
+  # Como reconhecer cada sitemap filho dentro do índice: o final (sufixo) do
+  # caminho da URL de cada um. Cada papel aceita um sufixo ou uma lista. Só os
+  # papéis listados aqui são lidos (e exigidos); apague os que seu site não tem.
+  #   articles = conteúdo editorial / páginas de detalhe (amostrado)
+  #   galleries = galerias de imagens (amostrado)
+  #   videos   = páginas de vídeo (amostrado)
+  #   homes    = rotas principais: home, categorias, páginas fixas (sempre todas)
+  sitemaps:
+    articles: /sitemap-articles.xml
+    galleries: /sitemap-galleries.xml
+    videos: /sitemap-videos.xml
+    homes: /sitemap-pages.xml
+
+# Classifica URLs em "tipos de página" por prefixo de caminho (vale a primeira
+# regra que casar). O tipo escolhe o arquivo de regras de schema em
+# config/schema_rules/<tipo>.json. Sem regra, vale o papel do sitemap
+# (articles -> article, videos -> video, galleries -> gallery) ou "other".
+page_types:
+  - prefix: /videos/
+    type: video
+  # - prefix: /tables/
+  #   type: table
+
+# Alertas de inventário opcionais.
+inventory:
+  # Avisa quando o host da URL não começa com "www."
+  require_www: false
+  # Trechos que não deveriam mais aparecer nas URLs (ex.: nome de um site antigo)
+  legacy_slugs: []
+
+sampling:
+  articles: 80
+  galleries: 20
+  videos: 20
+
+limits:
+  # Teto da soma de matérias + galerias + vídeos por execução (CLI e botão do
+  # dashboard). Não se aplica a --all. Cada URL faz 3 requisições ao site.
+  max_urls_per_run: 500
+
+http:
+  concurrency: 10
+  # Timeout geral (SEO/schema baixam a página inteira).
+  timeout_seconds: 30
+  # Status HTTP: cada tentativa tem no máximo status_timeout_seconds para ler o
+  # código da página. Falhas transitórias (timeout, queda de conexão) são
+  # retentadas até status_retries vezes; só então a URL é dada como fora do ar.
+  # Isso evita reportar como "fora do ar" páginas que respondem 200 ao abrir,
+  # mas recusaram uma conexão isolada sob concorrência.
+  status_timeout_seconds: 4
+  status_retries: 3
+
+output:
+  directory: saida
+
+seo:
+  # O Google não publica limites de caracteres para title/description; ele
+  # trunca o snippet pela largura do dispositivo (em pixels, não caracteres) e
+  # pode reescrever o texto. As faixas abaixo são estimativas da comunidade SEO
+  # do que costuma aparecer sem corte. Tamanho fora da faixa vira AVISO, não
+  # erro. Ausência de title ou de description é o único problema objetivo.
+  title_min: 50
+  title_max: 60
+  description_min: 120
+  description_max: 160
+
+schema:
+  # Regras de validação de JSON-LD, um arquivo por tipo de página. Editáveis
+  # sem alterar o código.
+  rules_directory: config/schema_rules
+
+pagespeed:
+  # Core Web Vitals. A chave vem de PSI_API_KEY (ambiente ou .env), nunca do
+  # código ou dos relatórios.
+  #
+  # method:
+  #   crux = Chrome UX Report API (rápido, ~1s/URL; dados de campo reais; sem
+  #          TBT nem score de laboratório). Requer a "Chrome UX Report API"
+  #          habilitada no projeto do Google Cloud.
+  #   psi  = PageSpeed Insights (lento, ~20-30s/URL; inclui TBT e laboratório).
+  method: crux
+  # A amostra de CWV é fixa: todas as homes (rotas de categoria) + 1 matéria
+  # por categoria — as URLs com chance real de ter dados de campo no CrUX.
+  # Matérias individuais fora dessa amostra não são consultadas. (Os demais
+  # checks — status/SEO/schema — continuam rodando sobre todas as URLs.)
+  # strategy: mobile (padrão) ou desktop. Pode ser sobrescrito por --desktop.
+  strategy: mobile
+  # A CrUX limita queries por janela (~100s) por chave. O coletor espaça as
+  # requisições em até max_qps req/s (throttling preventivo) e, se ainda tomar
+  # 429/403, aguarda o Retry-After antes de retentar. Reduza max_qps se persistir.
+  # Concorrência mais baixa e QPS menor dão mais folga à cota e reduzem 429.
+  concurrency: 3
+  # Mais tempo por requisição para a coleta não falhar por timeout.
+  timeout_seconds: 60
+  max_qps: 2.0
+  # Define como false para pular a coleta de CWV (ex.: sem chave de API).
+  enabled: true

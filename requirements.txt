@@ -1,0 +1,8 @@
+httpx
+lxml
+extruct
+jsonschema
+pandas
+openpyxl
+PyYAML
+pytest

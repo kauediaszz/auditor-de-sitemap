@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Auditoria do Sitemap · Dashboard</title>
+<style>
+  :root {
+    --bg: #0e1726;
+    --panel: #15213a;
+    --panel-2: #1b2b4a;
+    --line: #26375c;
+    --text: #e8edf6;
+    --muted: #9fb0cc;
+    --accent: #4f8cff;
+    --good: #3ecf8e;
+    --warn: #f5b942;
+    --bad: #ff5d6c;
+    --radius: 14px;
+    --shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: "Segoe UI", system-ui, -apple-system, Roboto, Arial, sans-serif;
+    background: radial-gradient(1200px 600px at 20% -10%, #1a2a4d 0%, var(--bg) 55%);
+    color: var(--text);
+    min-height: 100vh;
+  }
+  header {
+    padding: 28px 32px 8px;
+  }
+  header h1 {
+    margin: 0;
+    font-size: 24px;
+    letter-spacing: 0.2px;
+  }
+  header .meta {
+    color: var(--muted);
+    font-size: 13px;
+    margin-top: 6px;
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  header .meta b { color: var(--text); font-weight: 600; }
+  main { padding: 16px 32px 48px; }
+
+  .cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+  .card {
+    background: linear-gradient(180deg, var(--panel) 0%, var(--panel-2) 100%);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 18px 20px;
+    box-shadow: var(--shadow);
+  }
+  .card .label { color: var(--muted); font-size: 13px; }
+  .card .value { font-size: 30px; font-weight: 700; margin-top: 6px; }
+  .card .sub { font-size: 12px; color: var(--muted); margin-top: 4px; }
+  .value.good { color: var(--good); }
+  .value.warn { color: var(--warn); }
+  .value.bad { color: var(--bad); }
+
+  .grid-2 {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 18px 20px;
+    box-shadow: var(--shadow);
+  }
+  .panel h2 {
+    margin: 0 0 14px;
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+  }
+
+  .bar-row { display: flex; align-items: center; gap: 10px; margin: 8px 0; }
+  .bar-row .name { width: 120px; font-size: 13px; color: var(--muted); flex: none; }
+  .bar-track {
+    flex: 1;
+    height: 16px;
+    background: #0e1830;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid var(--line);
+  }
+  .bar-fill { height: 100%; border-radius: 8px; transition: width .4s ease; }
+  .bar-row .count { width: 42px; text-align: right; font-size: 13px; }
+
+  .donut-wrap { display: flex; align-items: center; gap: 22px; flex-wrap: wrap; }
+  .legend { display: flex; flex-direction: column; gap: 8px; font-size: 13px; }
+  .legend .item { display: flex; align-items: center; gap: 8px; }
+  .legend .swatch { width: 12px; height: 12px; border-radius: 3px; }
+
+  .toolbar {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    align-items: center;
+    margin-bottom: 12px;
+  }
+  .toolbar input, .toolbar select {
+    background: #0e1830;
+    border: 1px solid var(--line);
+    color: var(--text);
+    padding: 9px 12px;
+    border-radius: 10px;
+    font-size: 13px;
+    outline: none;
+  }
+  .toolbar input { flex: 1; min-width: 200px; }
+  .toolbar input:focus, .toolbar select:focus { border-color: var(--accent); }
+  .chip {
+    padding: 7px 12px;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    background: #0e1830;
+    color: var(--muted);
+    font-size: 12px;
+    cursor: pointer;
+    user-select: none;
+  }
+  .chip.active { color: #fff; border-color: var(--accent); background: rgba(79,140,255,.18); }
+
+  .table-wrap { overflow: auto; border-radius: var(--radius); border: 1px solid var(--line); }
+  table { border-collapse: collapse; width: 100%; font-size: 13px; }
+  thead th {
+    position: sticky; top: 0;
+    background: #11203c;
+    text-align: left;
+    padding: 11px 12px;
+    color: var(--muted);
+    font-weight: 600;
+    white-space: nowrap;
+    cursor: pointer;
+    border-bottom: 1px solid var(--line);
+  }
+  tbody td { padding: 10px 12px; border-bottom: 1px solid rgba(38,55,92,.5); vertical-align: top; }
+  tbody tr:hover { background: rgba(79,140,255,.06); }
+  td.url { max-width: 420px; }
+  td.url a { color: var(--accent); text-decoration: none; word-break: break-all; }
+  td.url a:hover { text-decoration: underline; }
+
+  .pill { display: inline-block; padding: 2px 9px; border-radius: 999px; font-size: 11px; font-weight: 600; }
+  .pill.ok { background: rgba(62,207,142,.16); color: var(--good); }
+  .pill.fail { background: rgba(255,93,108,.16); color: var(--bad); }
+  .pill.na { background: rgba(159,176,204,.14); color: var(--muted); }
+  .pill.bom { background: rgba(62,207,142,.16); color: var(--good); }
+  .pill.precisa_melhorar { background: rgba(245,185,66,.16); color: var(--warn); }
+  .pill.ruim { background: rgba(255,93,108,.16); color: var(--bad); }
+  .pill.sem_dado { background: rgba(159,176,204,.14); color: var(--muted); }
+
+  .files { display: flex; gap: 8px; flex-wrap: wrap; }
+  .files a {
+    font-size: 12px; color: var(--text); text-decoration: none;
+    background: #0e1830; border: 1px solid var(--line);
+    padding: 6px 11px; border-radius: 8px;
+  }
+  .files a:hover { border-color: var(--accent); }
+
+  details.md { margin-top: 8px; }
+  details.md summary { cursor: pointer; color: var(--muted); font-size: 13px; }
+  .md-body {
+    margin-top: 12px; font-size: 13px; line-height: 1.55;
+    max-height: 420px; overflow: auto; padding-right: 8px;
+  }
+  .md-body h1, .md-body h2, .md-body h3 { margin: 14px 0 6px; }
+  .md-body h1 { font-size: 18px; }
+  .md-body h2 { font-size: 15px; color: var(--accent); }
+  .md-body h3 { font-size: 13px; color: var(--muted); }
+  .md-body code { background: #0e1830; padding: 1px 5px; border-radius: 5px; font-size: 12px; }
+  .md-body ul { margin: 6px 0 10px; padding-left: 20px; }
+  .empty { color: var(--muted); font-size: 13px; padding: 20px; text-align: center; }
+  .footer { color: var(--muted); font-size: 12px; margin-top: 28px; text-align: center; }
+  svg text { fill: var(--text); }
+
+  .run-panel form {
+    display: flex;
+    gap: 14px;
+    flex-wrap: wrap;
+    align-items: flex-end;
+  }
+  .run-panel label {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .run-panel input[type="number"] {
+    width: 110px;
+    padding: 9px 10px;
+    background: var(--bg);
+    color: var(--text);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    font-size: 14px;
+  }
+  .run-panel button {
+    padding: 10px 18px;
+    background: var(--accent);
+    color: #fff;
+    border: 0;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .run-panel button:disabled { opacity: 0.5; cursor: not-allowed; }
+  .run-panel input:focus-visible, .run-panel button:focus-visible {
+    outline: 2px solid var(--warn);
+    outline-offset: 2px;
+  }
+  .run-note { margin: 10px 0 0; font-size: 13px; color: var(--muted); }
+  .run-note.erro { color: var(--bad); }
+  .run-note.ok { color: var(--good); }
+</style>
+</head>
+<body>
+<header>
+  <h1>Auditoria de Sitemap</h1>
+  <div class="meta">
+    <span>Execução: <b id="meta-run">—</b></span>
+    <span>Gerado em: <b id="meta-when">—</b></span>
+    <span>URLs auditadas: <b id="meta-total">—</b></span>
+  </div>
+</header>
+
+<main>
+  <section class="panel run-panel" style="margin-bottom:24px;" aria-labelledby="run-title">
+    <h2 id="run-title">Nova rodada · só URLs ainda não auditadas</h2>
+    <form id="run-form">
+      <label for="run-articles">Matérias
+        <input id="run-articles" type="number" min="0" step="1" inputmode="numeric" />
+      </label>
+      <label for="run-galleries">Galerias
+        <input id="run-galleries" type="number" min="0" step="1" inputmode="numeric" />
+      </label>
+      <label for="run-videos">Vídeos
+        <input id="run-videos" type="number" min="0" step="1" inputmode="numeric" />
+      </label>
+      <button type="submit" id="run-button" disabled>Rodar novamente</button>
+    </form>
+    <p class="run-note" id="run-note" role="status" aria-live="polite">Verificando servidor…</p>
+  </section>
+
+  <section class="cards" id="cards"></section>
+
+  <section class="grid-2">
+    <div class="panel">
+      <h2>Status HTTP</h2>
+      <div id="chart-http"></div>
+    </div>
+    <div class="panel">
+      <h2>Core Web Vitals (faixas)</h2>
+      <p style="margin:-6px 0 12px;color:var(--muted);font-size:12px;">
+        Medido só nas homes (categorias) e em 1 matéria por categoria.
+      </p>
+      <div class="donut-wrap">
+        <div id="chart-cwv"></div>
+        <div class="legend" id="legend-cwv"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel" style="margin-bottom:24px;">
+    <h2>URLs por tipo de página</h2>
+    <div id="chart-tipos"></div>
+  </section>
+
+  <section class="panel" style="margin-bottom:24px;">
+    <h2>Arquivos da entrega · Resumo</h2>
+    <div class="files" id="files"></div>
+    <details class="md">
+      <summary>Ver resumo.md completo</summary>
+      <div class="md-body" id="md"></div>
+    </details>
+  </section>
+
+  <section class="panel">
+    <h2>Detalhe por URL</h2>
+    <div class="toolbar">
+      <input id="search" type="search" placeholder="Filtrar por URL ou tipo…" />
+      <div class="chip active" data-filter="todos">Todas</div>
+      <div class="chip" data-filter="fora">Fora do ar</div>
+      <div class="chip" data-filter="seo">SEO reprovado</div>
+      <div class="chip" data-filter="schema">Schema reprovado</div>
+      <div class="chip" data-filter="cwv">CWV ruim</div>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th data-key="url">URL</th>
+            <th data-key="tipo_pagina">Tipo</th>
+            <th data-key="status_final">HTTP</th>
+            <th data-key="seo_ok">SEO</th>
+            <th data-key="schema_ok">Schema</th>
+            <th data-key="cwv_faixa">CWV</th>
+            <th data-key="lcp_ms">LCP</th>
+            <th data-key="inp_ms">INP</th>
+            <th data-key="cls">CLS</th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+    <div class="empty" id="empty" style="display:none;">Nenhuma URL para os filtros atuais.</div>
+  </section>
+
+  <div class="footer">Dashboard estático gerado localmente · Auditor de Sitemap</div>
+</main>
+
+<script>
+const BAND_COLORS = {
+  bom: "#3ecf8e",
+  precisa_melhorar: "#f5b942",
+  ruim: "#ff5d6c",
+  sem_dado: "#6b7b99",
+};
+const STATUS_COLORS = { "2xx": "#3ecf8e", "3xx": "#4f8cff", "4xx": "#f5b942", "5xx": "#ff5d6c", sem: "#6b7b99" };
+const BAND_LABEL = {
+  bom: "Bom", precisa_melhorar: "Precisa melhorar", ruim: "Ruim", sem_dado: "Sem dado",
+};
+
+let DATA = null;
+let rows = [];
+let activeFilter = "todos";
+let sortKey = null;
+let sortDir = 1;
+
+function el(tag, attrs = {}, children = []) {
+  const node = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (k === "class") node.className = v;
+    else if (k === "html") node.innerHTML = v;
+    else node.setAttribute(k, v);
+  }
+  for (const c of [].concat(children)) {
+    node.appendChild(typeof c === "string" ? document.createTextNode(c) : c);
+  }
+  return node;
+}
+
+function card(label, value, cls, sub) {
+  const c = el("div", { class: "card" });
+  c.appendChild(el("div", { class: "label" }, label));
+  c.appendChild(el("div", { class: "value " + (cls || "") }, String(value)));
+  if (sub) c.appendChild(el("div", { class: "sub" }, sub));
+  return c;
+}
+
+function renderCards() {
+  const r = DATA.resumo;
+  const c = r.counters;
+  const host = document.getElementById("cards");
+  host.innerHTML = "";
+  host.appendChild(card("URLs auditadas", r.total_urls, ""));
+  host.appendChild(card("Fora do ar", c.fora_do_ar,
+    c.fora_do_ar ? "bad" : "good", `de ${c.http_verificadas} verificadas`));
+  host.appendChild(card("SEO reprovado", c.seo_fail,
+    c.seo_fail ? "warn" : "good", `de ${c.seo_verificadas} verificadas`));
+  host.appendChild(card("Schema reprovado", c.schema_fail,
+    c.schema_fail ? "warn" : "good", `de ${c.schema_verificadas} verificadas`));
+  host.appendChild(card("CWV ruim", c.cwv_ruim,
+    c.cwv_ruim ? "bad" : "good",
+    `de ${c.cwv_amostradas ?? c.cwv_verificadas} medidas (homes + 1 matéria/categoria)`));
+}
+
+function renderBars(hostId, entries, colorFn) {
+  const host = document.getElementById(hostId);
+  host.innerHTML = "";
+  const max = Math.max(1, ...entries.map((e) => e[1]));
+  if (!entries.length) { host.appendChild(el("div", { class: "empty" }, "Sem dados.")); return; }
+  for (const [name, count] of entries) {
+    const row = el("div", { class: "bar-row" });
+    row.appendChild(el("div", { class: "name" }, name));
+    const track = el("div", { class: "bar-track" });
+    const fill = el("div", { class: "bar-fill" });
+    fill.style.width = (count / max) * 100 + "%";
+    fill.style.background = colorFn ? colorFn(name) : "#4f8cff";
+    track.appendChild(fill);
+    row.appendChild(track);
+    row.appendChild(el("div", { class: "count" }, String(count)));
+    host.appendChild(row);
+  }
+}
+
+function renderDonut(hostId, legendId, data) {
+  const entries = Object.entries(data).filter(([, v]) => v > 0);
+  const host = document.getElementById(hostId);
+  const legend = document.getElementById(legendId);
+  host.innerHTML = ""; legend.innerHTML = "";
+  const total = entries.reduce((a, [, v]) => a + v, 0);
+  if (!total) { host.appendChild(el("div", { class: "empty" }, "Sem dados de CWV.")); return; }
+
+  const size = 160, r = 60, cx = size / 2, cy = size / 2, sw = 26;
+  const svgNS = "http://www.w3.org/2000/svg";
+  const svg = document.createElementNS(svgNS, "svg");
+  svg.setAttribute("width", size); svg.setAttribute("height", size);
+  let offset = 0;
+  const circ = 2 * Math.PI * r;
+  for (const [name, value] of entries) {
+    const frac = value / total;
+    const circle = document.createElementNS(svgNS, "circle");
+    circle.setAttribute("cx", cx); circle.setAttribute("cy", cy); circle.setAttribute("r", r);
+    circle.setAttribute("fill", "none");
+    circle.setAttribute("stroke", BAND_COLORS[name] || "#4f8cff");
+    circle.setAttribute("stroke-width", sw);
+    circle.setAttribute("stroke-dasharray", `${frac * circ} ${circ}`);
+    circle.setAttribute("stroke-dashoffset", -offset * circ);
+    circle.setAttribute("transform", `rotate(-90 ${cx} ${cy})`);
+    svg.appendChild(circle);
+    offset += frac;
+    const item = el("div", { class: "item" });
+    const sw2 = el("span", { class: "swatch" });
+    sw2.style.background = BAND_COLORS[name] || "#4f8cff";
+    item.appendChild(sw2);
+    item.appendChild(document.createTextNode(`${BAND_LABEL[name] || name}: ${value}`));
+    legend.appendChild(item);
+  }
+  const label = document.createElementNS(svgNS, "text");
+  label.setAttribute("x", cx); label.setAttribute("y", cy + 5);
+  label.setAttribute("text-anchor", "middle");
+  label.setAttribute("font-size", "22"); label.setAttribute("font-weight", "700");
+  label.textContent = String(total);
+  svg.appendChild(label);
+  host.appendChild(svg);
+}
+
+function pill(ok) {
+  if (ok === null || ok === undefined) return `<span class="pill na">—</span>`;
+  return ok ? `<span class="pill ok">OK</span>` : `<span class="pill fail">Falha</span>`;
+}
+function bandPill(band) {
+  if (!band) return `<span class="pill na" title="Fora da amostra de CWV">não medido</span>`;
+  return `<span class="pill ${band}">${BAND_LABEL[band] || band}</span>`;
+}
+function statusCell(code) {
+  if (code === null || code === undefined) return `<span class="pill na">—</span>`;
+  const bucket = Math.floor(code / 100) + "xx";
+  const cls = bucket === "2xx" ? "ok" : (bucket === "3xx" ? "precisa_melhorar" : "fail");
+  return `<span class="pill ${cls}">${code}</span>`;
+}
+
+function matchesFilter(row) {
+  switch (activeFilter) {
+    case "fora": return row.fora_do_ar === true;
+    case "seo": return row.seo_ok === false;
+    case "schema": return row.schema_ok === false;
+    case "cwv": return row.cwv_ruim === true;
+    default: return true;
+  }
+}
+
+function renderTable() {
+  const term = document.getElementById("search").value.trim().toLowerCase();
+  let list = rows.filter((r) => {
+    if (!matchesFilter(r)) return false;
+    if (!term) return true;
+    return (r.url + " " + r.tipo_pagina).toLowerCase().includes(term);
+  });
+  if (sortKey) {
+    list = list.slice().sort((a, b) => {
+      let va = a[sortKey], vb = b[sortKey];
+      va = va === null || va === undefined ? "" : va;
+      vb = vb === null || vb === undefined ? "" : vb;
+      if (typeof va === "number" && typeof vb === "number") return (va - vb) * sortDir;
+      return String(va).localeCompare(String(vb)) * sortDir;
+    });
+  }
+  const tbody = document.getElementById("tbody");
+  tbody.innerHTML = "";
+  document.getElementById("empty").style.display = list.length ? "none" : "block";
+  for (const r of list) {
+    const tr = el("tr");
+    tr.innerHTML = `
+      <td class="url"><a href="${r.url}" target="_blank" rel="noopener">${r.url}</a></td>
+      <td>${r.tipo_pagina || "—"}</td>
+      <td>${statusCell(r.status_final)}</td>
+      <td>${pill(r.seo_ok)}</td>
+      <td>${pill(r.schema_ok)}</td>
+      <td>${bandPill(r.cwv_faixa)}</td>
+      <td>${r.lcp_ms ?? "—"}</td>
+      <td>${r.inp_ms ?? "—"}</td>
+      <td>${r.cls ?? "—"}</td>`;
+    tbody.appendChild(tr);
+  }
+}
+
+// Mini-render de Markdown (cabeçalhos, listas, código inline, negrito).
+function renderMarkdown(md) {
+  const esc = (s) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const lines = md.split("\n");
+  let html = "", inList = false;
+  for (let line of lines) {
+    const closeList = () => { if (inList) { html += "</ul>"; inList = false; } };
+    if (/^### /.test(line)) { closeList(); html += `<h3>${esc(line.slice(4))}</h3>`; }
+    else if (/^## /.test(line)) { closeList(); html += `<h2>${esc(line.slice(3))}</h2>`; }
+    else if (/^# /.test(line)) { closeList(); html += `<h1>${esc(line.slice(2))}</h1>`; }
+    else if (/^- /.test(line)) {
+      if (!inList) { html += "<ul>"; inList = true; }
+      let item = esc(line.slice(2));
+      item = item.replace(/`([^`]+)`/g, "<code>$1</code>");
+      html += `<li>${item}</li>`;
+    } else if (line.trim() === "") { closeList(); }
+    else {
+      closeList();
+      let p = esc(line).replace(/`([^`]+)`/g, "<code>$1</code>");
+      html += `<p>${p}</p>`;
+    }
+  }
+  if (inList) html += "</ul>";
+  return html;
+}
+
+function renderFiles() {
+  const host = document.getElementById("files");
+  host.innerHTML = "";
+  for (const name of DATA.arquivos) {
+    host.appendChild(el("a", { href: "../" + name, target: "_blank" }, name));
+  }
+}
+
+function renderAll() {
+  document.getElementById("meta-run").textContent = DATA.execucao;
+  document.getElementById("meta-when").textContent = DATA.gerado_em.replace("T", " ");
+  document.getElementById("meta-total").textContent = DATA.resumo.total_urls;
+
+  renderCards();
+  renderBars("chart-http",
+    Object.entries(DATA.resumo.status_http).filter(([, v]) => v > 0),
+    (n) => STATUS_COLORS[n] || "#4f8cff");
+  renderDonut("chart-cwv", "legend-cwv", DATA.resumo.cwv_faixas);
+  renderBars("chart-tipos",
+    Object.entries(DATA.resumo.por_tipo).sort((a, b) => b[1] - a[1]));
+  renderFiles();
+  document.getElementById("md").innerHTML = renderMarkdown(DATA.resumo_md || "_Sem resumo.md._");
+
+  rows = DATA.linhas;
+  renderTable();
+}
+
+// Liga os eventos uma única vez; renderAll() pode ser chamado de novo após
+// uma nova rodada sem duplicar listeners.
+function init() {
+  renderAll();
+  setupRunPanel();
+
+  document.getElementById("search").addEventListener("input", renderTable);
+  document.querySelectorAll(".chip").forEach((chip) => {
+    chip.addEventListener("click", () => {
+      document.querySelectorAll(".chip").forEach((c) => c.classList.remove("active"));
+      chip.classList.add("active");
+      activeFilter = chip.dataset.filter;
+      renderTable();
+    });
+  });
+  document.querySelectorAll("thead th").forEach((th) => {
+    th.addEventListener("click", () => {
+      const key = th.dataset.key;
+      if (sortKey === key) sortDir *= -1; else { sortKey = key; sortDir = 1; }
+      renderTable();
+    });
+  });
+}
+
+// --- Nova rodada (só URLs novas). Requer o servidor local com a API. ---
+function setupRunPanel() {
+  const form = document.getElementById("run-form");
+  const button = document.getElementById("run-button");
+  const note = document.getElementById("run-note");
+  const fields = {
+    articles: document.getElementById("run-articles"),
+    galleries: document.getElementById("run-galleries"),
+    videos: document.getElementById("run-videos"),
+  };
+  let cap = null;
+  let pollTimer = null;
+
+  function say(text, kind) {
+    note.textContent = text;           // textContent: nunca interpreta HTML
+    note.className = "run-note" + (kind ? " " + kind : "");
+  }
+  function setBusy(busy) {
+    button.disabled = busy;
+    Object.values(fields).forEach((f) => { f.disabled = busy; });
+  }
+  function disable(text) {
+    setBusy(true);
+    say(text);
+  }
+
+  async function reloadData() {
+    const r = await fetch("dados.json?t=" + Date.now(), { cache: "no-store" });
+    DATA = await r.json();
+    renderAll();
+  }
+
+  function describe(status) {
+    const got = status.obtido;
+    if (!got) return "";
+    return " Matérias: " + got.articles + ", galerias: " + got.galleries +
+      ", vídeos: " + got.videos + ".";
+  }
+
+  async function refresh() {
+    let status;
+    try {
+      const r = await fetch("/api/status", { cache: "no-store" });
+      if (!r.ok) throw new Error("sem API");
+      status = await r.json();
+    } catch (e) {
+      clearInterval(pollTimer);
+      disable("Botão indisponível: abra o painel com " +
+        "python -m auditor.dashboard (servidor local).");
+      return;
+    }
+    cap = status.teto;
+    for (const key of Object.keys(fields)) {
+      if (fields[key].value === "") fields[key].value = status.padroes[key];
+    }
+    if (status.estado === "rodando") {
+      setBusy(true);
+      say("Auditoria em andamento… pode levar alguns minutos.");
+      if (!pollTimer) pollTimer = setInterval(refresh, 3000);
+      return;
+    }
+    clearInterval(pollTimer);
+    pollTimer = null;
+    setBusy(false);
+    if (status.estado === "concluido") {
+      say(status.mensagem + describe(status), "ok");
+      if (status.execucao !== DATA.execucao) await reloadData();
+    } else if (status.estado === "sem_novas") {
+      say(status.mensagem, "erro");
+    } else if (status.estado === "erro") {
+      say(status.mensagem, "erro");
+    } else {
+      say("Informe quantas URLs novas auditar por tipo (teto: " + cap + " no total).");
+    }
+  }
+
+  form.addEventListener("submit", async (ev) => {
+    ev.preventDefault();
+    const body = {};
+    for (const [key, field] of Object.entries(fields)) {
+      const value = Number(field.value);
+      if (field.value === "" || !Number.isInteger(value) || value < 0) {
+        say("Use números inteiros iguais ou maiores que zero.", "erro");
+        return;
+      }
+      body[key] = value;
+    }
+    const total = body.articles + body.galleries + body.videos;
+    if (total === 0) { say("Informe ao menos uma URL.", "erro"); return; }
+    if (cap !== null && total > cap) {
+      say("O total (" + total + ") passa do teto de " + cap + ".", "erro");
+      return;
+    }
+    setBusy(true);
+    try {
+      const r = await fetch("/api/run", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (r.status !== 202) {
+        const err = await r.json().catch(() => ({}));
+        setBusy(false);
+        say(err.erro || "Não foi possível iniciar a rodada.", "erro");
+        return;
+      }
+    } catch (e) {
+      setBusy(false);
+      say("Falha ao falar com o servidor local.", "erro");
+      return;
+    }
+    say("Auditoria em andamento… pode levar alguns minutos.");
+    if (!pollTimer) pollTimer = setInterval(refresh, 3000);
+  });
+
+  refresh();
+}
+
+fetch("dados.json")
+  .then((r) => r.json())
+  .then((d) => { DATA = d; init(); })
+  .catch((e) => {
+    document.querySelector("main").innerHTML =
+      '<div class="panel"><div class="empty">Não foi possível carregar dados.json.<br>' +
+      'Sirva a pasta por HTTP (ex.: <code>python -m auditor.dashboard</code>), ' +
+      'não abra o index.html direto pelo arquivo.<br><br>' + String(e) + '</div></div>';
+  });
+</script>
+</body>
+</html>

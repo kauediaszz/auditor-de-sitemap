@@ -1,0 +1,37 @@
+{
+  "page_type": "home",
+  "description": "Home principal (grafo Organization + WebSite com SearchAction + WebPage)",
+  "types": {
+    "Organization": {
+      "min_count": 1,
+      "required": {
+        "name": "str",
+        "url": "str",
+        "sameAs": "list",
+        "logo": "object_or_list"
+      }
+    },
+    "WebSite": {
+      "min_count": 1,
+      "required": {
+        "url": "str",
+        "potentialAction": "object_or_list"
+      }
+    },
+    "WebPage": {
+      "min_count": 1,
+      "required": {
+        "inLanguage": "str",
+        "url": "str"
+      }
+    }
+  },
+  "value_consistency": [
+    {
+      "field_path": "name",
+      "types": ["Organization"],
+      "rule": "organization_name_consistent",
+      "severity": "warning"
+    }
+  ]
+}

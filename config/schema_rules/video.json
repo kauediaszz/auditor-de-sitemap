@@ -1,0 +1,56 @@
+{
+  "page_type": "video",
+  "description": "Vídeo (VideoObject + BreadcrumbList + grafo da home)",
+  "types": {
+    "VideoObject": {
+      "min_count": 1,
+      "required": {
+        "name": "str",
+        "description": "str",
+        "thumbnailUrl": "any",
+        "uploadDate": "str",
+        "duration": "str"
+      },
+      "required_one_of": [["contentUrl", "embedUrl"]],
+      "iso_dates": ["uploadDate"]
+    },
+    "BreadcrumbList": {
+      "min_count": 1,
+      "required": {
+        "itemListElement": "list"
+      }
+    },
+    "Organization": {
+      "min_count": 1,
+      "required": {
+        "name": "str"
+      }
+    },
+    "WebSite": {
+      "min_count": 1
+    },
+    "WebPage": {
+      "min_count": 1,
+      "required": {
+        "inLanguage": "str",
+        "url": "str"
+      }
+    }
+  },
+  "page_url_checks": [
+    {
+      "schema_type": "WebPage",
+      "field_path": "url",
+      "rule": "webpage_url_matches_video",
+      "severity": "error"
+    }
+  ],
+  "value_consistency": [
+    {
+      "field_path": "name",
+      "types": ["Organization"],
+      "rule": "organization_name_consistent",
+      "severity": "warning"
+    }
+  ]
+}

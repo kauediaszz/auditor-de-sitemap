@@ -1,0 +1,62 @@
+{
+  "page_type": "article",
+  "description": "Matéria (NewsArticle + grafo Organization/WebSite/WebPage + BreadcrumbList)",
+  "types": {
+    "NewsArticle": {
+      "min_count": 1,
+      "max_count": 1,
+      "required": {
+        "headline": "str",
+        "description": "str",
+        "datePublished": "str",
+        "dateModified": "str",
+        "author": "object_or_list",
+        "publisher": "object",
+        "articleSection": "str",
+        "isAccessibleForFree": "any",
+        "hasPart": "object_or_list",
+        "mainEntityOfPage": "object"
+      },
+      "iso_dates": ["datePublished", "dateModified"],
+      "date_not_before": [["dateModified", "datePublished"]],
+      "images_by_dimension": [[1280, 720], [1200, 1200], [960, 1200]]
+    },
+    "Organization": {
+      "min_count": 1,
+      "required": {
+        "name": "str",
+        "logo": "object_or_list"
+      }
+    },
+    "WebSite": {
+      "min_count": 1
+    },
+    "WebPage": {
+      "min_count": 1,
+      "required": {
+        "inLanguage": "str"
+      }
+    },
+    "BreadcrumbList": {
+      "min_count": 1,
+      "required": {
+        "itemListElement": "list"
+      }
+    }
+  },
+  "duplicate_entity_checks": [
+    {
+      "schema_type": "Organization",
+      "rule": "organizations_duplicadas",
+      "severity": "warning"
+    }
+  ],
+  "value_consistency": [
+    {
+      "field_path": "name",
+      "types": ["Organization"],
+      "rule": "organization_name_consistent",
+      "severity": "warning"
+    }
+  ]
+}

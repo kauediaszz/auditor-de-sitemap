@@ -1,0 +1,35 @@
+{
+  "page_type": "other",
+  "description": "Rota avulsa (grafo genérico Organization + WebSite + WebPage + BreadcrumbList)",
+  "types": {
+    "Organization": {
+      "min_count": 1,
+      "required": {
+        "name": "str"
+      }
+    },
+    "WebSite": {
+      "min_count": 1
+    },
+    "WebPage": {
+      "min_count": 1,
+      "required": {
+        "inLanguage": "str"
+      }
+    },
+    "BreadcrumbList": {
+      "min_count": 1,
+      "required": {
+        "itemListElement": "list"
+      }
+    }
+  },
+  "value_consistency": [
+    {
+      "field_path": "name",
+      "types": ["Organization"],
+      "rule": "organization_name_consistent",
+      "severity": "warning"
+    }
+  ]
+}
