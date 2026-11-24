@@ -1,286 +1,261 @@
 # Sitemap Auditor
 
-Ferramenta de linha de comando (Python) que lê o índice de sitemaps de um site,
-escolhe uma amostra das URLs mais recentes e audita cada uma: **status HTTP**,
-**SEO** básico, **dados estruturados (JSON-LD / schema.org)** e **Core Web Vitals**.
-Gera relatórios em CSV, Markdown e Excel e um **dashboard local** com botão para
-rodar novas auditorias só com URLs ainda não vistas.
+Iae! Fico feliz que você queira conhecer melhor o projeto. Vou te explicar como ele funciona, o que você consegue fazer com ele e como colocar tudo para rodar.
 
-> **English summary:** a configurable sitemap auditor. Point it at your sitemap
-> index, describe your sitemap layout in `config/config.yaml`, and it checks
-> HTTP status, SEO tags, JSON-LD against rule files you edit (no code changes),
-> and Core Web Vitals (CrUX/PageSpeed). Outputs CSV/Markdown/Excel plus a local
-> dashboard. It is meant to be used as a **template**: copy, configure, adapt.
-> The docs below are in Portuguese.
+Basicamente, o **Sitemap Auditor** é uma ferramenta desenvolvida em Python que automatiza auditorias de páginas de um site. Em vez de precisar acessar várias URLs manualmente para conferir se está tudo certo, você configura a ferramenta e deixa ela fazer esse trabalho.
 
-Este repositório é um **modelo (template)**: nenhum dado de um site real vem
-incluído. Você descreve o seu site em arquivos de configuração e o resto funciona.
+Ela verifica status HTTP, SEO, dados estruturados (JSON-LD / Schema.org) e Core Web Vitals. No final, gera relatórios com os resultados e disponibiliza um dashboard local para facilitar a visualização.
+
+Um detalhe importante: esse projeto é um template. Isso significa que ele não vem configurado para um site específico. Você precisa informar qual site deseja auditar e ajustar algumas configurações antes de começar.
 
 ---
 
-## Como funciona
+## 1. Como o projeto funciona?
+
+Vamos imaginar que você queira auditar um portal de notícias.
+
+O primeiro passo é informar o endereço do sitemap principal do site, aquele arquivo que reúne os demais sitemaps.
+
+A partir dele, o auditor identifica os diferentes grupos de páginas, como:
+
+- Matérias;
+- Galerias;
+- Vídeos;
+- Páginas principais, como home e categorias.
+
+Depois disso, ele seleciona uma amostra das URLs mais recentes e começa a executar as verificações.
+
+Cada página passa por algumas etapas:
+
+**Status HTTP:** verifica se a página está respondendo corretamente, se apresenta erros 404 ou 500 e se existem redirecionamentos.
+
+**SEO:** verifica informações importantes do HTML, como title, meta description, canonical, H1, noindex e Open Graph.
+
+**Dados estruturados:** procura os blocos JSON-LD da página e verifica se eles seguem as regras definidas para aquele tipo de conteúdo.
+
+**Core Web Vitals:** consulta métricas de desempenho, como LCP, INP e CLS, utilizando dados do Google CrUX ou PageSpeed Insights.
+
+Ao terminar, tudo é organizado em relatórios para você analisar os resultados.
+
+## 2. Como configurar o projeto?
+
+Antes de executar a ferramenta, precisamos preparar o ambiente.
+
+Você vai precisar ter o Python 3.11 ou superior instalado.
+
+Primeiro, clone o repositório e entre na pasta do projeto:
 
 ```
-sitemap-index.xml ──► leitor de sitemaps ──► amostra de URLs (mais recentes)
-                                                   │
-        ┌──────────────────┬───────────────────────┼───────────────────┐
-        ▼                  ▼                       ▼                   ▼
-   status HTTP          SEO (HTML)         schema (JSON-LD)     Core Web Vitals
- (retry, redirects)  title, canonical,   regras em arquivos    CrUX ou PageSpeed
-                     H1, noindex, OG        JSON externos      (amostra menor)
-        └──────────────────┴───────────────────────┴───────────────────┘
-                                   │
-                                   ▼
-        saida/AAAA-MM-DD_HHMMSS/  auditoria.csv · schema_detalhe.csv ·
-        resumo.md · auditoria.xlsx · cwv_reprovados.xlsx · dashboard/
-```
-
-1. **Leitura dos sitemaps.** O auditor baixa o índice mestre (`sitemapindex`),
-   reconhece cada sitemap filho por um **papel** (matérias, galerias, vídeos,
-   rotas principais) e coleta as URLs com `lastmod`. Cada URL fica sempre
-   ligada ao sitemap de origem.
-2. **Amostragem.** Matérias, galerias e vídeos são amostrados: as *N* mais
-   recentes por `lastmod`. As **rotas principais** (papel `homes`) são sempre
-   auditadas por completo.
-3. **Verificações.** Status HTTP e SEO rodam sobre a amostra inteira; o schema
-   é validado contra as regras do *tipo de página*; o Core Web Vitals roda numa
-   amostra menor (homes + 1 matéria por categoria), porque só páginas com
-   tráfego têm dados de campo.
-4. **Saída em duas fases.** Primeiro os relatórios rápidos (CSV, Markdown,
-   Excel); depois o Core Web Vitals (lento) e os arquivos finais.
-5. **Histórico.** As URLs auditadas são registradas em `saida/urls_auditadas.json`
-   para que uma nova rodada (`--only-new` ou o botão do dashboard) pegue só as
-   próximas, sem repetir.
-
-### O que é verificado
-
-| Verificação | O que olha |
-|---|---|
-| Inventário | URL repetida no sitemap, URL com fragmento (`#`), host sem `www` e *slugs* legados (os dois últimos são opcionais) |
-| Status HTTP | status final, cadeia de redirects, tempo; “fora do ar” = 4xx/5xx, timeout ou erro de rede (com *retry* para não acusar falhas passageiras) |
-| SEO | `title` e `meta description` (tamanho é só aviso), `canonical`, `noindex`, um único `H1`, tags Open Graph |
-| Schema | blocos `application/ld+json`, `@graph` achatado e validado por regras JSON: campos obrigatórios, contagem de tipos, datas ISO, `@id` consistente, dimensões de imagem |
-| Core Web Vitals | LCP, INP, CLS (e TBT no PageSpeed), faixas do Google: bom / precisa melhorar / ruim |
-
-Limitações: o auditor **não executa JavaScript** (lê o HTML que o servidor
-entrega) e os limites de tamanho de `title`/`description` são estimativas, não
-regras do Google.
-
----
-
-## Começando
-
-Requer Python 3.11+.
-
-```bash
-git clone <este-repositorio>
+git clone <url-do-repositorio>
 cd auditor-de-sitemap
-
-python3 -m venv .venv
-source .venv/bin/activate          # Windows: .venv\Scripts\activate
-pip install -r requirements.txt
-
-pytest -q                          # confere se tudo funciona (não acessa a internet)
 ```
 
-### Arquivos que você precisa criar/editar
+Agora, vamos criar um ambiente virtual para instalar as dependências sem misturar os pacotes com outros projetos:
 
-Este repositório traz só exemplos. Para auditar o **seu** site:
+```
+python3 -m venv .venv
+```
 
-| Arquivo | O que fazer | Vai para o Git? |
-|---|---|---|
-| `config/config.local.yaml` | Copie `config/config.yaml` e edite: URL do índice, papéis dos sitemaps, tipos de página, quantidades | **Não** (está no `.gitignore`) |
-| `.env` | Copie `.env.example` e preencha `PSI_API_KEY` (opcional; só para Core Web Vitals) | **Não** (está no `.gitignore`) |
-| `config/schema_rules/<tipo>.json` | Ajuste/crie as regras de schema do seu site, um arquivo por tipo de página | Sim, se não tiver dados sensíveis |
+Ative o ambiente virtual:
 
-```bash
+```
+# Linux / WSL
+source .venv/bin/activate
+
+# Windows
+.venv\Scripts\activate
+```
+
+Com o ambiente ativado, instale as dependências:
+
+```
+pip install -r requirements.txt
+```
+
+Pronto! Agora vamos conferir se tudo está funcionando:
+
+```
+pytest -q
+```
+
+Esse comando executa os testes automatizados do projeto. Eles utilizam respostas simuladas, então não precisam acessar a internet.
+
+## 3. Configurando o seu site
+
+Aqui começa a parte mais importante.
+
+Como o projeto é um template, precisamos dizer qual site será auditado.
+
+Primeiro, copie os arquivos de exemplo:
+
+```
 cp config/config.yaml config/config.local.yaml
 cp .env.example .env
-# edite os dois arquivos
-python -m auditor.main --config config/config.local.yaml
 ```
 
-A pasta `saida/` é criada sozinha a cada execução.
+O arquivo `config.local.yaml` será responsável pelas configurações do site.
 
----
+Abra esse arquivo e procure a configuração de sitemap:
 
-## Usando como template para o seu site
-
-Tudo que é específico de um site fica em configuração, não no código.
-
-### 1. Descreva seus sitemaps (`config.yaml`)
-
-```yaml
+```
 sources:
   sitemap_index: https://www.seusite.com/sitemap-index.xml
-  sitemaps:                       # papel -> sufixo do caminho do sitemap filho
+```
+
+Substitua o endereço pelo sitemap principal do site que você deseja auditar.
+
+Depois, configure os papéis dos sitemaps:
+
+```
+sources:
+  sitemap_index: https://www.seusite.com/sitemap-index.xml
+  sitemaps:
     articles: /sitemap-articles.xml
-    videos:   [/sitemap-videos.xml, /videos/sitemap.xml]   # aceita lista
-    homes:    /sitemap-pages.xml
-    # galleries: não tem? apague a linha: papéis ausentes não são lidos
+    videos: /sitemap-videos.xml
+    homes: /sitemap-pages.xml
 ```
 
-O auditor percorre o índice mestre e associa cada sitemap filho ao papel cujo
-sufixo bate com o final do caminho. Só os papéis listados são exigidos.
+Cada papel representa um tipo de conteúdo.
 
-| Papel | Uso |
-|---|---|
-| `articles` | conteúdo editorial / páginas de detalhe (amostrado) |
-| `galleries` | galerias de imagens (amostrado) |
-| `videos` | páginas de vídeo (amostrado) |
-| `homes` | rotas principais: home, categorias, páginas fixas (**sempre todas**) |
+Por exemplo, `articles` representa matérias, `videos` representa páginas de vídeos e `homes` representa as páginas principais.
 
-### 2. Classifique as páginas (`page_types`)
+Você não precisa cadastrar todos os tipos. Se o seu site não possui galerias, por exemplo, basta não adicionar esse papel.
 
-```yaml
-page_types:            # a primeira regra que casar vale
-  - prefix: /videos/
-    type: video
-  - prefix: /tables/
-    type: table
+## 4. Configurando as regras de dados estruturados
+
+Agora vamos falar sobre o Schema.org.
+
+O auditor consegue verificar se as páginas estão emitindo os dados estruturados esperados. Para isso, ele utiliza arquivos JSON com regras específicas para cada tipo de página.
+
+Esses arquivos ficam dentro de:
+
+```
+config/schema_rules/
 ```
 
-Sem regra, o tipo vem do papel (`articles` → `article`, `videos` → `video`,
-`galleries` → `gallery`), a raiz do site é `home` e o resto é `other`.
+Você encontrará exemplos como:
 
-### 3. Escreva as regras de schema (`config/schema_rules/`)
+```
+article.json
+home.json
+video.json
+other.json
+```
 
-Cada tipo de página tem um arquivo `<tipo>.json` com as regras de JSON-LD.
-Os exemplos incluídos (`article`, `home`, `video`, `other`) são só ponto de
-partida: **ajuste ao que o seu site realmente emite**.
+Imagine que você queira verificar uma matéria. Dentro do arquivo `article.json`, pode definir que ela precisa apresentar um `NewsArticle`, com informações como headline, datePublished e author.
 
-```json
+Exemplo:
+
+```
 {
   "page_type": "article",
   "types": {
     "NewsArticle": {
       "min_count": 1,
       "max_count": 1,
-      "required": { "headline": "str", "datePublished": "str", "author": "object_or_list" },
-      "iso_dates": ["datePublished", "dateModified"],
-      "date_not_before": [["dateModified", "datePublished"]]
-    },
-    "BreadcrumbList": { "min_count": 1, "required": { "itemListElement": "list" } }
+      "required": {
+        "headline": "str",
+        "datePublished": "str",
+        "author": "object_or_list"
+      }
+    }
   }
 }
 ```
 
-Para um tipo de página sem arquivo de regras, o auditor apenas registra os tipos
-de schema detectados, sem validar.
+Dessa forma, quando o auditor encontrar uma matéria, ele vai conferir se essas informações estão presentes.
 
-### 4. Alertas de inventário opcionais
+A vantagem é que você consegue alterar as regras diretamente nos arquivos JSON, sem precisar modificar o código Python.
 
-```yaml
-inventory:
-  require_www: true
-  legacy_slugs: [site-antigo, /old-section/]
+## 5. Executando uma auditoria
+
+Com as configurações prontas, chegou a hora de executar o projeto.
+
+Para iniciar uma auditoria utilizando as quantidades definidas no arquivo de configuração, execute:
+
 ```
-
-### 5. Quantidades e limites
-
-```yaml
-sampling: { articles: 80, galleries: 20, videos: 20 }
-limits:   { max_urls_per_run: 500 }   # teto da soma, por execução
-```
-
----
-
-## Uso
-
-```bash
-# amostra padrão do config
 python -m auditor.main --config config/config.local.yaml
-
-# quantidades por tipo (0 pula o tipo)
-python -m auditor.main --articles 150 --galleries 10 --videos 0
-
-# só URLs que ainda não foram auditadas em execuções anteriores
-python -m auditor.main --articles 100 --only-new
-
-# todas as URLs do sitemap (ignora amostragem e teto; pode demorar muito)
-python -m auditor.main --all
-
-# Core Web Vitals no desktop, e abre o dashboard ao final
-python -m auditor.main --desktop --serve
 ```
 
-| Opção | Efeito |
-|---|---|
-| `--config` | caminho do YAML de configuração |
-| `--articles/--galleries/--videos N` | quantidade por tipo (sobrescreve `sampling`) |
-| `--only-new` | ignora URLs já registradas em `saida/urls_auditadas.json` |
-| `--all` | audita tudo, sem limites |
-| `--desktop` | Core Web Vitals com estratégia desktop (padrão: mobile) |
-| `--serve`, `--port`, `--no-browser` | sobe o dashboard local ao final |
-| `--output` | caminho do Excel principal (os demais arquivos vão junto) |
-| `-v` | logs detalhados |
+Você também pode personalizar a execução.
 
-### Core Web Vitals
+Por exemplo, se quiser auditar 150 matérias, 10 galerias e não quiser verificar vídeos:
 
-Configurado em `pagespeed` no `config.yaml`:
+```
+python -m auditor.main --articles 150 --galleries 10 --videos 0
+```
 
-- `method: crux` (padrão): API do Chrome UX Report. Rápida, dados reais de
-  usuários, sem TBT. Exige habilitar a *Chrome UX Report API* no projeto
-  Google Cloud da chave. URLs sem dados de campo (pouco tráfego) ficam como
-  `sem_dado`, sem derrubar a execução.
-- `method: psi`: PageSpeed Insights. Lenta, inclui TBT e laboratório.
+Outra funcionalidade interessante é a opção `--only-new`.
 
-A chave vem da variável `PSI_API_KEY` (ambiente ou `.env`) e **nunca** é gravada
-em relatórios ou logs. Sem chave, o Core Web Vitals é pulado com um aviso.
+Ela utiliza um histórico das URLs já auditadas e evita que você fique verificando as mesmas páginas em todas as execuções.
 
-### Dashboard
+```
+python -m auditor.main --articles 100 --only-new
+```
 
-```bash
+Se quiser auditar absolutamente todas as URLs encontradas nos sitemaps, pode utilizar:
+
+```
+python -m auditor.main --all
+```
+
+Só tenha atenção: essa opção ignora os limites de amostragem e pode demorar bastante, dependendo do tamanho do site.
+
+## 6. Como utilizar o dashboard?
+
+Além dos relatórios, o projeto possui um dashboard local.
+
+Para iniciar o painel, execute:
+
+```
 python -m auditor.dashboard --config config/config.local.yaml
 ```
 
-Abre um painel local (HTML/JS puro, sem CDN) com cards, gráficos e tabela
-filtrável. O painel **Nova rodada** deixa você informar quantas matérias,
-galerias e vídeos auditar e roda uma nova auditoria **só com URLs novas**. O
-servidor aceita apenas conexões locais (`127.0.0.1`) e roda uma auditoria por
-vez. Abrindo o `index.html` direto do disco, o botão fica desabilitado.
+Ele apresenta cards, gráficos e uma tabela com os resultados das auditorias.
 
-### Arquivos gerados (`saida/AAAA-MM-DD_HHMMSS/`)
+Uma funcionalidade interessante é o botão **Nova rodada**.
 
-- `auditoria.csv`: uma linha por URL (status, SEO, schema, Core Web Vitals).
-- `schema_detalhe.csv`: uma linha por problema de schema.
-- `resumo.md`: contagens, piores casos e alertas de inventário.
-- `auditoria.xlsx`: planilha principal; `cwv_reprovados.xlsx`: só URLs reprovadas.
-- `dashboard/`: painel estático (`index.html` + `dados.json`).
+Por ele, você consegue informar quantas matérias, galerias e vídeos deseja auditar. O sistema executa uma nova rodada utilizando somente URLs que ainda não foram auditadas.
+
+Isso facilita bastante o acompanhamento contínuo do site.
+
+## 7. Onde encontrar os resultados?
+
+A cada execução, o projeto cria uma nova pasta dentro de `saida/`, identificada pela data e horário da auditoria.
+
+Dentro dela, você encontrará:
+
+- `auditoria.csv`: resultados gerais de cada URL.
+- `schema_detalhe.csv`: problemas encontrados nos dados estruturados.
+- `resumo.md`: resumo da execução, com contagens e principais alertas.
+- `auditoria.xlsx`: planilha completa para análise.
+- `cwv_reprovados.xlsx`: páginas que não passaram nas verificações de Core Web Vitals.
+- `dashboard/`: versão estática do painel, com os dados daquela execução.
+
+Assim, você consegue consultar os resultados, comparar execuções e identificar problemas que precisam de atenção.
+
+## 8. Algumas limitações importantes
+
+Antes de utilizar a ferramenta, vale conhecer alguns detalhes:
+
+- O auditor não executa JavaScript. Ele analisa o HTML entregue pelo servidor.
+- O Core Web Vitals depende da disponibilidade de dados no Google CrUX ou PageSpeed Insights.
+- Para utilizar o PageSpeed ou CrUX, você precisa configurar uma chave de API no arquivo `.env`.
+- Páginas com pouco tráfego podem não apresentar dados de campo no CrUX.
+- O projeto deve ser utilizado somente em sites próprios ou com autorização.
+
+Também é importante configurar os limites de requisições para não sobrecarregar o servidor do site.
 
 ---
 
-## Estrutura do projeto
+## Resumindo
 
-```
-auditor/
-  main.py              fluxo principal e CLI
-  config.py            leitura de .env e chaves
-  history.py           histórico de URLs já auditadas
-  sitemap/reader.py    leitura do índice, papéis, amostragem, classificação
-  checks/              http_status, seo, schema (+ schema_rules), crux, core_web_vitals, inventory
-  reports/             csv, markdown, excel, cwv
-  dashboard/           gerador do painel, servidor local e template HTML
-config/
-  config.yaml          configuração de exemplo (copie e edite)
-  schema_rules/        regras de JSON-LD de exemplo, um arquivo por tipo de página
-tests/                 testes automatizados (respostas HTTP simuladas)
-```
+A ideia do Sitemap Auditor é facilitar o trabalho de auditoria técnica de um site.
 
-## Testes
+Você configura o sitemap, define quais páginas deseja verificar, ajusta as regras de SEO e Schema e executa a ferramenta.
 
-```bash
-pytest -q
-```
+Ela faz as verificações automaticamente e entrega os resultados organizados em relatórios e em um dashboard.
 
-Os testes usam respostas HTTP simuladas (`httpx.MockTransport`) e **não acessam
-a internet**.
+O mais interessante é que você pode reutilizar esse projeto em diferentes sites. Basta alterar os arquivos de configuração e as regras necessárias, sem precisar desenvolver uma ferramenta nova do zero.
 
-## Boas práticas e uso responsável
-
-- Audite apenas sites **seus** ou para os quais você tenha **autorização**.
-- Respeite o servidor: ajuste `http.concurrency` e `limits.max_urls_per_run`.
-  Cada URL gera cerca de 3 requisições (status, SEO e schema).
-- O auditor se identifica com o `User-Agent` `SitemapAuditor/0.1`.
-- Nunca commite `.env`, `config/config.local.yaml` ou `saida/`: já estão no
-  `.gitignore`, mas confira antes de publicar um *fork*.
+**Minha recomendação:** comece configurando um site com uma quantidade pequena de URLs. Faça a primeira execução, confira os relatórios e veja se as regras estão de acordo com o que você espera. Depois, aumente a amostra e utilize o dashboard para acompanhar as próximas auditorias.
